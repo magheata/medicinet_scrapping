@@ -1,3 +1,4 @@
+import time
 import networkx as nx
 from bs4 import BeautifulSoup
 import requests
@@ -6,6 +7,8 @@ import multiprocessing
 paper_link = 'https://www.medicinenet.com'
 
 diseasesWithSymptoms = {}
+results = []
+
 
 def getDiseases(diseasesForSymptom):
     diseases = []
@@ -58,6 +61,12 @@ def getData(link):
     pageSymptoms = symptompsSoup.find('div', class_="AZ_results")
     symptoms = pageSymptoms.find_all('li')
     getDiseasesForSymptomsLink(symptoms, diseasesWithSymptoms)
+    return diseasesWithSymptoms
+
+def multiprocessing_func(x, return_list):
+    #time.sleep(2)
+    #getData(x)
+    return_list.append(getData(x))
 
 if __name__ == '__main__':
     paper_link_aux = 'https://www.medicinenet.com/symptoms_and_signs/alpha_a.htm'
@@ -65,19 +74,20 @@ if __name__ == '__main__':
     soup = BeautifulSoup(page.content, 'html.parser')
     totalSymptomsDiv = soup.find_all('div', id="A_Z")[0]
     totalSymptomsLinks = totalSymptomsDiv.find_all('li')
-    jobs = []
+    processes = []
     manager = multiprocessing.Manager()
-    return_dict = manager.dict()
+    results_list = manager.list()
+
     for link in totalSymptomsLinks:
         print(f"Ahora empieza en link {link}")
-        p = multiprocessing.Process(target=getData(link))
-        jobs.append(p)
+        p = multiprocessing.Process(target=multiprocessing_func, args=(link, results_list))
+        processes.append(p)
         p.start()
 
-    results = []
-    for proc in jobs:
+    for proc in processes:
         proc.join()
         print("Ahora ha acabado 1 link")
-        #results.append(return_dict.value)
 
-    print(results)
+    d1 = {k: v for e in results_list for (k, v) in e.items()}
+
+    print(f"Este es el diccionario resultante: \n\n {d1}")
